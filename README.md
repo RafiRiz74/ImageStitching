@@ -1,40 +1,40 @@
-# ImageStitching-MPI
-Operating System yang digunakan adalah ubuntu server 22.04
-
+# Image Stitching
 ## Topologi
 ![Topologi](https://github.com/RafiRiz74/ImageStitching/blob/main/Topologi.png)
 
-## 1. Install MPI
+## 1. Install MPI dan Python
 ```sh
-sudo apt-get install -y mpich-doc mpich
+sudo apt install python3-pip
 ```
 ```sh
 pip install mpi4py
 ```
-output <br>
-![MPI](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/0a4b646e-f73b-4060-9364-49c5f43f4f2a)
 ## 2. Konfigurasi
-### 2.1 Konfigurasi /etc/hosts <br>
-cek alamat ip komputer menggunakan perintah `ip a` `if config` `hostname -  I` <br>
+### 2.1 Konfigurasi hosts <br>
+Dapat dicek alamat ip dengan menggunakan perintah `ip a` `if config` `hostname -  I` <br>
 **MASTER**
 ```sh
-192.168.135.181 master
-192.168.135.39 slave1
-192.168.135.75 slave2
-192.168.135.168 slave3
+192.168.41.190 master
+192.168.41.31 slave1
+192.168.41.180 slave2
 ```
-**SLAVE**
+**SLAVE1**
 ```sh
-192.168.135.181 master
-192.168.135.39 slave1
+192.168.41.190 master
+192.168.41.31 slave1
+```
+**SLAVE2**
+```sh
+192.168.41.190 master
+192.168.41.180 slave2
 ```
 ### 2.2 Konfigurasi SSH <br>
-Lakukan pada semua slave
+Ini dapat dilakukan diberbagai hosts, seperti master dapat melakukannya pada slave1 dan slave2, sedangkan slave1 dan slave2 dapat mengkonfigurasi  master. Ini dilakukan agar dapat mengetahui apakah ssh multinode telah berjalan dengan baik atau belum
 ```sh
-ssh-copy-id <nama user>@<slave>
+ssh <nama user>@<hosts>
 ```
 
-## 3. Install numpy, imutils dan opencv
+## 3. Install module yang diperlukan
 ### 3.1 numpy
     pip install numpy
 ### 3.2 imutils
@@ -42,28 +42,17 @@ ssh-copy-id <nama user>@<slave>
 ### 3.3 opencv
     pip install opencv-python
 
-## 4. Input bahan projek melalui github
+## 4. Copy file pada slave
 ```sh
-git clone https://github.com/kaliadi/image-Stitching.git\
+scp kelompokpp/* mpiuser@slave1:/home/uaskelpp/
+scp kelompokpp/* mpiuser@slave2:/home/uaskelpp/
 ```
 
-## 5. Copy Seluruh File ke dalam Slave
-### 5.1 Copy File
-```sh
-scp image-Stiching/* mpiuser@slave1:/home/mpiuser/
-scp image-Stiching/* mpiuser@slave2:/home/mpiuser/
-scp image-Stiching/* mpiuser@slave3:/home/mpiuser/
-```
-### 5.2 Cek Path File pada Master dan Slave <br>
-**MASTER** <br>
-![master](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/99b8c0c3-d4fe-4737-ab2d-5d7cf5d3c67a) <br>
-**SLAVE** <br>
-![slave](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/0e2a4f5a-fa9b-430f-ae80-e35f5889f397)
-
-## 6. Program
+## 5. Proses penjalanan program
+### 5.1 Program
 ```sh
 # USAGE
-# python image_stitching_simple.py --images images/scottsdale --output output.png
+# python image_stitching_simple.py --images images/scottsdale --output output.p>
 # import the necessary packages
 from imutils import paths
 import numpy as np
@@ -74,9 +63,9 @@ import cv2
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--images", type=str, required=True,
-	help="path to input directory of images to stitch")
+        help="path to input directory of images to stitch")
 ap.add_argument("-o", "--output", type=str, required=True,
-	help="path to the output image")
+        help="path to the output image")
 args = vars(ap.parse_args())
 
 # grab the paths to the input images and initialize our images list
@@ -87,8 +76,8 @@ images = []
 # loop over the image paths, load each one, and add them to our
 # images to stich list
 for imagePath in imagePaths:
-	image = cv2.imread(imagePath)
-	images.append(image)
+        image = cv2.imread(imagePath)
+        images.append(image)
 
 # initialize OpenCV's image sticher object and then perform the image
 # stitching
@@ -99,20 +88,16 @@ stitcher = cv2.createStitcher() if imutils.is_cv3() else cv2.Stitcher_create()
 # if the status is '0', then OpenCV successfully performed image
 # stitching
 if status == 0:
-	# write the output stitched image to disk
-	cv2.imwrite(args["output"], stitched)
+        # write the output stitched image to disk
+        cv2.imwrite(args["output"], stitched)
 ```
 
-## 7. Jalankan Image Stitching dengan MPI dan Multinode
-### 7.1 Image yang digunakan
-![WhatsApp Image 2023-11-14 at 9 08 26 PM](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/683ac523-28c9-4ff9-9ebf-318ba52b3577)
-![WhatsApp Image 2023-11-14 at 9 08 26 PM (1)](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/ec3cfff3-5c5d-4488-b932-39097f1245bb)
-![WhatsApp Image 2023-11-14 at 9 08 26 PM (2)](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/9b9d8ae3-9f0e-484a-99c6-c485242b49d7)
-### 7.2 Waktu Running
-    mpiexec -n <jumlah slave> -host master,slave1,slave2,slave3 python3 /home/mpiuser/image-Stitching/image_s.py -i /home/mpiuser/image-Stitching/images -o outputmulti.png
-![image](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/8f9214f2-bd1b-4822-ba67-5e0c13d328ad)
-### 7.3 Melihat Hasil Output <br>
-Tampilan jika output sudah tersimpan
-![image](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/3448576c-6cd8-45e4-80cd-17398e9847ad)
-### 7.4 Output
-![image](https://github.com/feliana444/ImageStitching-MPI/assets/145323449/2abddfe2-001c-493a-965d-871f6e180928)
+### 5.2 Gambar yang digunakan
+![Foto1](https://github.com/RafiRiz74/ImageStitching/blob/main/Foto1.jpg)
+![Foto2](https://github.com/RafiRiz74/ImageStitching/blob/main/Foto2.jpg)
+![Foto3](https://github.com/RafiRiz74/ImageStitching/blob/main/Foto3.jpg)
+### 5.3 Running mpi4python
+    mpiexec -n 3 -host master,slave1,slave2 python3 /home/uaskelpp/kelompokpp/ImageStitching.py -i /home/uaskelpp/kelompokpp/images -o OutputImageStitching.png
+![Running](https://github.com/RafiRiz74/ImageStitching/blob/main/Running.png)
+### 5.4 Output
+![OutputImageStitching](https://github.com/RafiRiz74/ImageStitching/blob/main/OutputImageStitching.jpg)
